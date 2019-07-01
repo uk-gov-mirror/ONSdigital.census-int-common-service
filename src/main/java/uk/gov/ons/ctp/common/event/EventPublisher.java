@@ -1,24 +1,30 @@
 package uk.gov.ons.ctp.common.event;
 
-import com.godaddy.logging.Logger;
-import com.godaddy.logging.LoggerFactory;
+import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.UUID;
-import lombok.Getter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.util.ReflectionUtils;
+import com.godaddy.logging.Logger;
+import com.godaddy.logging.LoggerFactory;
+import lombok.Getter;
 import uk.gov.ons.ctp.common.error.CTPException;
+import uk.gov.ons.ctp.common.error.CTPException.Fault;
 import uk.gov.ons.ctp.common.event.model.EventPayload;
 import uk.gov.ons.ctp.common.event.model.FulfilmentPayload;
 import uk.gov.ons.ctp.common.event.model.FulfilmentRequest;
 import uk.gov.ons.ctp.common.event.model.FulfilmentRequestedEvent;
-import uk.gov.ons.ctp.common.event.model.GenericEvent;
+import uk.gov.ons.ctp.common.event.model.GenericMessage;
+import uk.gov.ons.ctp.common.event.model.GenericPayload;
 import uk.gov.ons.ctp.common.event.model.Header;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedEvent;
+import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedPayload;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedResponse;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalDetails;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalEvent;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalPayload;
 import uk.gov.ons.ctp.common.event.model.SurveyLaunchedEvent;
+import uk.gov.ons.ctp.common.event.model.SurveyLaunchedPayload;
 import uk.gov.ons.ctp.common.event.model.SurveyLaunchedResponse;
 
 /** Service responsible for the publication of events. */
@@ -30,17 +36,19 @@ public class EventPublisher {
 
   @Getter
   public enum EventType {
-    SURVEY_LAUNCHED("RESPONDENT_HOME", "RH"),
-    RESPONDENT_AUTHENTICATED("RESPONDENT_HOME", "RH"),
-    FULFILMENT_REQUESTED("CONTACT_CENTRE_API", "CC"),
-    REFUSAL_RECEIVED("CONTACT_CENTRE_API", "CC");
+    SURVEY_LAUNCHED("RESPONDENT_HOME", "RH", SurveyLaunchedEvent.class),
+    RESPONDENT_AUTHENTICATED("RESPONDENT_HOME", "RH", RespondentAuthenticatedEvent.class),
+    FULFILMENT_REQUESTED("CONTACT_CENTRE_API", "CC", FulfilmentRequestedEvent.class),
+    REFUSAL_RECEIVED("CONTACT_CENTRE_API", "CC", RespondentRefusalEvent.class);
 
     private String source;
     private String channel;
+    private Class<?> messageClass;
 
-    EventType(String source, String channel) {
+    EventType(String source, String channel, Class<?> messageClass) {
       this.source = source;
       this.channel = channel;
+      this.messageClass = messageClass;
     }
   }
 
@@ -63,33 +71,24 @@ public class EventPublisher {
    */
   public String sendEvent(String routingKey, EventPayload payload) throws CTPException {
 
-    GenericEvent genericEvent = null;
+    EventType eventType;
+    GenericPayload genericPayload;
+    
     if (payload instanceof SurveyLaunchedResponse) {
-      SurveyLaunchedEvent event = new SurveyLaunchedEvent();
-      event.setEvent(buildHeader(EventType.SURVEY_LAUNCHED));
-      event.getPayload().setResponse((SurveyLaunchedResponse) payload);
-      genericEvent = event;
+      eventType = EventType.SURVEY_LAUNCHED;
+      genericPayload = new SurveyLaunchedPayload((SurveyLaunchedResponse) payload);
 
     } else if (payload instanceof RespondentAuthenticatedResponse) {
-      RespondentAuthenticatedEvent event = new RespondentAuthenticatedEvent();
-      event.setEvent(buildHeader(EventType.RESPONDENT_AUTHENTICATED));
-      event.getPayload().setResponse((RespondentAuthenticatedResponse) payload);
-      genericEvent = event;
+      eventType = EventType.RESPONDENT_AUTHENTICATED;
+      genericPayload = new RespondentAuthenticatedPayload((RespondentAuthenticatedResponse) payload);
 
     } else if (payload instanceof FulfilmentRequest) {
-      FulfilmentRequestedEvent event = new FulfilmentRequestedEvent();
-      event.setEvent(buildHeader(EventType.FULFILMENT_REQUESTED));
-      FulfilmentPayload fulfilmentPayload = new FulfilmentPayload((FulfilmentRequest) payload);
-      event.setPayload(fulfilmentPayload);
-      genericEvent = event;
+      eventType = EventType.FULFILMENT_REQUESTED;
+      genericPayload = new FulfilmentPayload((FulfilmentRequest) payload);
 
     } else if (payload instanceof RespondentRefusalDetails) {
-      RespondentRefusalEvent event = new RespondentRefusalEvent();
-      event.setEvent(buildHeader(EventType.REFUSAL_RECEIVED));
-      RespondentRefusalPayload respondentRefusalPayload =
-          new RespondentRefusalPayload((RespondentRefusalDetails) payload);
-      event.setPayload(respondentRefusalPayload);
-      genericEvent = event;
+      eventType = EventType.REFUSAL_RECEIVED;
+      genericPayload = new RespondentRefusalPayload((RespondentRefusalDetails) payload);
 
     } else {
       log.error(payload.getClass().getName() + " not supported");
@@ -97,8 +96,26 @@ public class EventPublisher {
           CTPException.Fault.SYSTEM_ERROR, payload.getClass().getName() + " not supported");
     }
 
-    template.convertAndSend(routingKey, genericEvent);
-    return genericEvent.getEvent().getTransactionId();
+    GenericMessage message = createMessage(eventType, genericPayload);
+    
+    template.convertAndSend(routingKey, message);
+    return message.getEvent().getTransactionId();
+  }
+
+  private GenericMessage createMessage(EventType eventType, GenericPayload genericPayload) throws CTPException {
+    GenericMessage message = null;
+    try {
+      message = (GenericMessage) eventType.getMessageClass().getConstructor().newInstance();
+    } catch (Exception e) {   
+      e.printStackTrace();
+    }
+    
+    Header header = buildHeader(eventType);
+    message.setEvent(header);
+    
+    setPayload(message, genericPayload);
+    
+    return message;
   }
 
   private static Header buildHeader(EventType type) {
@@ -109,5 +126,17 @@ public class EventPublisher {
         .dateTime(new Date())
         .transactionId(UUID.randomUUID().toString())
         .build();
+  }
+  
+  private void setPayload(GenericMessage message, GenericPayload genericPayload) throws CTPException {
+    try {
+      Field field = ReflectionUtils.findField(message.getClass(), "payload");
+      ReflectionUtils.makeAccessible(field);
+      ReflectionUtils.setField(field, message, genericPayload);
+    } catch (Exception e) {
+      String errorMessage = "Failed to set payload for message of type: " + message.getClass();
+      log.error(e, errorMessage);
+      throw new CTPException(Fault.SYSTEM_ERROR, e, errorMessage);
+    }
   }
 }

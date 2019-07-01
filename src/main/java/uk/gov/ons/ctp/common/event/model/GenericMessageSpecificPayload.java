@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FulfilmentPayload implements GenericPayload {
+public class GenericMessageSpecificPayload {
 
-  private FulfilmentRequest fulfilmentRequest;
+  private Header event;
 }

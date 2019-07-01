@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RespondentAuthenticatedPayload {
+public class RespondentAuthenticatedPayload implements GenericPayload {
 
   private RespondentAuthenticatedResponse response = new RespondentAuthenticatedResponse();
 }

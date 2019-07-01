@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SurveyLaunchedPayload {
+public class SurveyLaunchedPayload implements GenericPayload {
 
   private SurveyLaunchedResponse response = new SurveyLaunchedResponse();
 }

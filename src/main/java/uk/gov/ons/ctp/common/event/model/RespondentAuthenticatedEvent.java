@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RespondentAuthenticatedEvent extends GenericEvent {
+public class RespondentAuthenticatedEvent extends GenericMessage {
 
   private RespondentAuthenticatedPayload payload = new RespondentAuthenticatedPayload();
 }

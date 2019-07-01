@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UACPayload {
+public class UACPayload implements GenericPayload {
 
   private UAC uac = new UAC();
 }

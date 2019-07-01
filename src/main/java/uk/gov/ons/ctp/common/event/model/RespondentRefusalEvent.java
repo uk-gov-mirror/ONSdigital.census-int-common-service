@@ -9,7 +9,6 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
-public class RespondentRefusalEvent extends GenericEvent {
-
+public class RespondentRefusalEvent extends GenericMessage {
   private RespondentRefusalPayload payload;
 }

@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class FulfilmentRequestedEvent extends GenericEvent {
+public class FulfilmentRequestedEvent extends GenericMessage {
 
   private FulfilmentPayload payload;
 }

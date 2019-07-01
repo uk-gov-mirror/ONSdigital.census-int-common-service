@@ -28,6 +28,7 @@ import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedEvent;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedResponse;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalDetails;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalEvent;
+import uk.gov.ons.ctp.common.event.model.RespondentRefusalPayload;
 import uk.gov.ons.ctp.common.event.model.SurveyLaunchedEvent;
 import uk.gov.ons.ctp.common.event.model.SurveyLaunchedResponse;
 
@@ -153,8 +154,9 @@ public class EventPublisherTest {
     assertEquals(
         EventPublisher.EventType.REFUSAL_RECEIVED.getChannel(), event.getEvent().getChannel());
     assertNotNull(event.getEvent().getDateTime());
+    RespondentRefusalPayload sentRefusalPayload = (RespondentRefusalPayload) event.getPayload();
     assertEquals(
-        respondentRefusalDetails.getAgentId(), event.getPayload().getRefusal().getAgentId());
+        respondentRefusalDetails.getAgentId(), sentRefusalPayload.getRefusal().getAgentId());
   }
 
   /** Test build of Respondent Authenticated event message with wrong pay load */

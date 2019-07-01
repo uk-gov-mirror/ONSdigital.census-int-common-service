@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class UACEvent extends GenericEvent {
+public class UACEvent extends GenericMessage {
 
   private UACPayload payload = new UACPayload();
 }

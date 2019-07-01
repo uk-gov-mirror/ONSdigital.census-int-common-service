@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CasePayload {
+public class CasePayload implements GenericPayload {
 
   private CollectionCase collectionCase = new CollectionCase();
 }
