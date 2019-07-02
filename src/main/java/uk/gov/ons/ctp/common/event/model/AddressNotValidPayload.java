@@ -2,14 +2,12 @@ package uk.gov.ons.ctp.common.event.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-public class CaseEvent extends GenericMessage {
+public class AddressNotValidPayload implements GenericPayload {
 
-  private CasePayload payload = new CasePayload();
+  private InvalidAddressDetails invalidAddress;
 }

@@ -1,5 +1,6 @@
 package uk.gov.ons.ctp.common.event.model;
 
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,12 +10,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CollectionCase {
 
-  private String id;
-  private String caseRef;
-  private String survey;
-  private String collectionExerciseId;
-  private Address address = new Address();
-  private Contact contact = new Contact();
-  private String state;
-  private String actionableFrom;
+  private UUID id;
 }

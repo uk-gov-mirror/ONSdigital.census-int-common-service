@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RespondentAuthenticatedPayload implements GenericPayload {
 
-  private RespondentAuthenticatedResponse response = new RespondentAuthenticatedResponse();
+  private RespondentAuthenticatedResponse response;
 }

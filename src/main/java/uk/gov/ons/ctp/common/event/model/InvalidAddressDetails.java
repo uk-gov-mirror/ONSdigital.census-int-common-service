@@ -1,14 +1,16 @@
 package uk.gov.ons.ctp.common.event.model;
 
-import java.util.UUID;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class CollectionCaseCompact {
+@Builder
+public class InvalidAddressDetails implements EventPayload {
 
-  private UUID id;
+  private String reason;
+  private CollectionCase collectionCase;
 }

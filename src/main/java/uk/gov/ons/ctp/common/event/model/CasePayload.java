@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CasePayload implements GenericPayload {
 
-  private CollectionCase collectionCase = new CollectionCase();
+  private CollectionCaseDetails collectionCase = new CollectionCaseDetails();
 }

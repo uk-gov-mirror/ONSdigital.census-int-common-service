@@ -9,7 +9,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
 import java.util.Date;
 import java.util.UUID;
 import org.junit.Test;
@@ -24,6 +23,7 @@ import uk.gov.ons.ctp.common.error.CTPException;
 import uk.gov.ons.ctp.common.event.model.EventPayload;
 import uk.gov.ons.ctp.common.event.model.FulfilmentRequest;
 import uk.gov.ons.ctp.common.event.model.FulfilmentRequestedEvent;
+import uk.gov.ons.ctp.common.event.model.InvalidAddressDetails;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedEvent;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedResponse;
 import uk.gov.ons.ctp.common.event.model.RespondentRefusalDetails;
@@ -142,6 +142,35 @@ public class EventPublisherTest {
         ArgumentCaptor.forClass(RespondentRefusalEvent.class);
 
     String transactionId = eventPublisher.sendEvent(ROUTING_KEY, respondentRefusalDetails);
+
+    verify(template, times(1)).convertAndSend(eq(ROUTING_KEY), eventCapture.capture());
+    RespondentRefusalEvent event = eventCapture.getValue();
+
+    assertEquals(event.getEvent().getTransactionId(), transactionId);
+    assertThat(UUID.fromString(event.getEvent().getTransactionId()), instanceOf(UUID.class));
+    assertEquals(EventPublisher.EventType.REFUSAL_RECEIVED.toString(), event.getEvent().getType());
+    assertEquals(
+        EventPublisher.EventType.REFUSAL_RECEIVED.getSource(), event.getEvent().getSource());
+    assertEquals(
+        EventPublisher.EventType.REFUSAL_RECEIVED.getChannel(), event.getEvent().getChannel());
+    assertNotNull(event.getEvent().getDateTime());
+    RespondentRefusalPayload sentRefusalPayload = (RespondentRefusalPayload) event.getPayload();
+    assertEquals(
+        respondentRefusalDetails.getAgentId(), sentRefusalPayload.getRefusal().getAgentId());
+  }
+
+  /** Test event message with InvalidAddressDetails payload */
+  @Test
+  public void sendEventInvalidAddressDetailsPayload() throws Exception {
+
+    // Build fulfilment
+    InvalidAddressDetails invalidAddressDetails = new InvalidAddressDetails();
+    invalidAddressDetails.setReason("DEMOLISHED");
+
+    ArgumentCaptor<RespondentRefusalEvent> eventCapture =
+        ArgumentCaptor.forClass(RespondentRefusalEvent.class);
+
+    String transactionId = eventPublisher.sendEvent(ROUTING_KEY, addressNotFoundpayload);
 
     verify(template, times(1)).convertAndSend(eq(ROUTING_KEY), eventCapture.capture());
     RespondentRefusalEvent event = eventCapture.getValue();

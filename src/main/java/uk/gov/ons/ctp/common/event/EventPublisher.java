@@ -1,15 +1,17 @@
 package uk.gov.ons.ctp.common.event;
 
-import com.godaddy.logging.Logger;
-import com.godaddy.logging.LoggerFactory;
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.UUID;
-import lombok.Getter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.util.ReflectionUtils;
+import com.godaddy.logging.Logger;
+import com.godaddy.logging.LoggerFactory;
+import lombok.Getter;
 import uk.gov.ons.ctp.common.error.CTPException;
 import uk.gov.ons.ctp.common.error.CTPException.Fault;
+import uk.gov.ons.ctp.common.event.model.AddressNotValidEvent;
+import uk.gov.ons.ctp.common.event.model.AddressNotValidPayload;
 import uk.gov.ons.ctp.common.event.model.EventPayload;
 import uk.gov.ons.ctp.common.event.model.FulfilmentPayload;
 import uk.gov.ons.ctp.common.event.model.FulfilmentRequest;
@@ -17,6 +19,7 @@ import uk.gov.ons.ctp.common.event.model.FulfilmentRequestedEvent;
 import uk.gov.ons.ctp.common.event.model.GenericMessage;
 import uk.gov.ons.ctp.common.event.model.GenericPayload;
 import uk.gov.ons.ctp.common.event.model.Header;
+import uk.gov.ons.ctp.common.event.model.InvalidAddressDetails;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedEvent;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedPayload;
 import uk.gov.ons.ctp.common.event.model.RespondentAuthenticatedResponse;
@@ -39,7 +42,8 @@ public class EventPublisher {
     SURVEY_LAUNCHED("RESPONDENT_HOME", "RH", SurveyLaunchedEvent.class),
     RESPONDENT_AUTHENTICATED("RESPONDENT_HOME", "RH", RespondentAuthenticatedEvent.class),
     FULFILMENT_REQUESTED("CONTACT_CENTRE_API", "CC", FulfilmentRequestedEvent.class),
-    REFUSAL_RECEIVED("CONTACT_CENTRE_API", "CC", RespondentRefusalEvent.class);
+    REFUSAL_RECEIVED("CONTACT_CENTRE_API", "CC", RespondentRefusalEvent.class),
+    ADDRESS_NOT_VALID("CONTACT_CENTRE_API", "CC", AddressNotValidEvent.class);
 
     private String source;
     private String channel;
@@ -91,6 +95,10 @@ public class EventPublisher {
       eventType = EventType.REFUSAL_RECEIVED;
       genericPayload = new RespondentRefusalPayload((RespondentRefusalDetails) payload);
 
+    } else if (payload instanceof RespondentRefusalDetails) {
+      eventType = EventType.ADDRESS_NOT_VALID;
+      genericPayload = new AddressNotValidPayload((InvalidAddressDetails) payload);
+
     } else {
       log.error(payload.getClass().getName() + " not supported");
       throw new CTPException(
@@ -103,18 +111,24 @@ public class EventPublisher {
     return message.getEvent().getTransactionId();
   }
 
+  /*
+   * Create a populate a standard format message. This code uses reflection to reduce 
+   * the amount of repetitive code that would otherwise be needed for each type of event.
+   */
   private GenericMessage createMessage(EventType eventType, GenericPayload genericPayload)
       throws CTPException {
+    // Create new instance of the message class
     GenericMessage message = null;
     try {
       message = (GenericMessage) eventType.getMessageClass().getConstructor().newInstance();
     } catch (Exception e) {
-      e.printStackTrace();
+      String errorMessage = "Failed to create instance of the message class: " + eventType.getMessageClass().getCanonicalName();
+      log.error(errorMessage, e);
+      throw new CTPException(Fault.SYSTEM_ERROR, e, errorMessage);
     }
 
-    Header header = buildHeader(eventType);
-    message.setEvent(header);
-
+    // Add header and payload
+    message.setEvent(buildHeader(eventType));
     setPayload(message, genericPayload);
 
     return message;

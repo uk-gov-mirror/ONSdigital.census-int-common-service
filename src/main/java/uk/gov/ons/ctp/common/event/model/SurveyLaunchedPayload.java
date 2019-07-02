@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SurveyLaunchedPayload implements GenericPayload {
 
-  private SurveyLaunchedResponse response = new SurveyLaunchedResponse();
+  private SurveyLaunchedResponse response;
 }
