@@ -1,13 +1,13 @@
 package uk.gov.ons.ctp.common.event;
 
+import com.godaddy.logging.Logger;
+import com.godaddy.logging.LoggerFactory;
 import java.lang.reflect.Field;
 import java.util.Date;
 import java.util.UUID;
+import lombok.Getter;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.util.ReflectionUtils;
-import com.godaddy.logging.Logger;
-import com.godaddy.logging.LoggerFactory;
-import lombok.Getter;
 import uk.gov.ons.ctp.common.error.CTPException;
 import uk.gov.ons.ctp.common.error.CTPException.Fault;
 import uk.gov.ons.ctp.common.event.model.EventPayload;
@@ -73,14 +73,15 @@ public class EventPublisher {
 
     EventType eventType;
     GenericPayload genericPayload;
-    
+
     if (payload instanceof SurveyLaunchedResponse) {
       eventType = EventType.SURVEY_LAUNCHED;
       genericPayload = new SurveyLaunchedPayload((SurveyLaunchedResponse) payload);
 
     } else if (payload instanceof RespondentAuthenticatedResponse) {
       eventType = EventType.RESPONDENT_AUTHENTICATED;
-      genericPayload = new RespondentAuthenticatedPayload((RespondentAuthenticatedResponse) payload);
+      genericPayload =
+          new RespondentAuthenticatedPayload((RespondentAuthenticatedResponse) payload);
 
     } else if (payload instanceof FulfilmentRequest) {
       eventType = EventType.FULFILMENT_REQUESTED;
@@ -97,24 +98,25 @@ public class EventPublisher {
     }
 
     GenericMessage message = createMessage(eventType, genericPayload);
-    
+
     template.convertAndSend(routingKey, message);
     return message.getEvent().getTransactionId();
   }
 
-  private GenericMessage createMessage(EventType eventType, GenericPayload genericPayload) throws CTPException {
+  private GenericMessage createMessage(EventType eventType, GenericPayload genericPayload)
+      throws CTPException {
     GenericMessage message = null;
     try {
       message = (GenericMessage) eventType.getMessageClass().getConstructor().newInstance();
-    } catch (Exception e) {   
+    } catch (Exception e) {
       e.printStackTrace();
     }
-    
+
     Header header = buildHeader(eventType);
     message.setEvent(header);
-    
+
     setPayload(message, genericPayload);
-    
+
     return message;
   }
 
@@ -127,8 +129,9 @@ public class EventPublisher {
         .transactionId(UUID.randomUUID().toString())
         .build();
   }
-  
-  private void setPayload(GenericMessage message, GenericPayload genericPayload) throws CTPException {
+
+  private void setPayload(GenericMessage message, GenericPayload genericPayload)
+      throws CTPException {
     try {
       Field field = ReflectionUtils.findField(message.getClass(), "payload");
       ReflectionUtils.makeAccessible(field);
